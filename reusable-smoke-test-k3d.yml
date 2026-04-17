@@ -1,0 +1,49 @@
+name: Reusable — Smoke Test k3d
+
+on:
+  workflow_call:
+    inputs:
+      image-tag:
+        required: true
+        type: string
+
+jobs:
+  smoke-test:
+    name: Smoke test K8s (k3d self-hosted)
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Créer cluster k3d éphémère
+        run: |
+          k3d cluster delete smoke-test 2>/dev/null || true
+          k3d cluster create smoke-test --wait --timeout 60s
+
+      - name: Configurer kubeconfig
+        run: k3d kubeconfig merge smoke-test --kubeconfig-switch-context
+
+      - name: Déployer via Helm (values k3d)
+        run: |
+          helm upgrade --install ayurveda ./chart \
+            -f ./values/values-k3d.yaml \
+            --set backend.image.tag=${{ inputs.image-tag }} \
+            --set frontend.image.tag=${{ inputs.image-tag }} \
+            --wait --timeout 90s
+
+      - name: Attendre les pods
+        run: |
+          kubectl wait --for=condition=ready pod \
+            -l app=backend --timeout=60s
+          kubectl wait --for=condition=ready pod \
+            -l app=frontend --timeout=60s
+
+      - name: Smoke test HTTP
+        run: |
+          kubectl port-forward svc/backend 3001:3001 &
+          sleep 3
+          curl -f http://localhost:3001/api/health
+          kill %1
+
+      - name: Cleanup cluster
+        if: always()
+        run: k3d cluster delete smoke-test

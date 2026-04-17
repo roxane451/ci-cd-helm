@@ -1,0 +1,55 @@
+name: Reusable — Helm Deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: "preprod | prod"
+      image-tag:
+        required: true
+        type: string
+      helm-values-file:
+        required: true
+        type: string
+    secrets:
+      KUBECONFIG_B64:
+        required: true
+
+jobs:
+  helm-deploy:
+    name: Helm deploy → ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout ayur-veda-helm
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/ayur-veda-helm
+          path: helm-values
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup kubectl + Helm
+        uses: azure/setup-kubectl@v3
+      - uses: azure/setup-helm@v4
+
+      - name: Configurer KUBECONFIG
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Helm upgrade
+        run: |
+          helm upgrade --install ayurveda \
+            oci://ghcr.io/${{ github.repository_owner }}/helm-mern-stack \
+            -f helm-values/${{ inputs.helm-values-file }} \
+            --set backend.image.tag=${{ inputs.image-tag }} \
+            --set frontend.image.tag=${{ inputs.image-tag }} \
+            --namespace ayur-${{ inputs.environment }} \
+            --create-namespace \
+            --atomic \
+            --timeout 120s
