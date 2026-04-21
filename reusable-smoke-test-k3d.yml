@@ -14,6 +14,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # le chart Helm est dans un repo séparé, il faut le checkout.
+      - name: Checkout ayur-veda-helm
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/ayur-veda-helm
+          path: helm-values
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
       - name: Créer cluster k3d éphémère
         run: |
           k3d cluster delete smoke-test 2>/dev/null || true
@@ -24,11 +35,12 @@ jobs:
 
       - name: Déployer via Helm (values k3d)
         run: |
-          helm upgrade --install ayurveda ./chart \
-            -f ./values/values-k3d.yaml \
+          helm upgrade --install ayurveda \
+            oci://ghcr.io/${{ github.repository_owner }}/helm-mern-stack \
+            -f helm-values/helm/values-k3d.yaml \
             --set backend.image.tag=${{ inputs.image-tag }} \
             --set frontend.image.tag=${{ inputs.image-tag }} \
-            --wait --timeout 90s
+            --wait --timeout 120s
 
       - name: Attendre les pods
         run: |
@@ -39,7 +51,7 @@ jobs:
 
       - name: Smoke test HTTP
         run: |
-          kubectl port-forward svc/backend 3001:3001 &
+          kubectl port-forward svc/backend 3001:5000 &
           sleep 3
           curl -f http://localhost:3001/api/health
           kill %1
