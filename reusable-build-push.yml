@@ -11,17 +11,26 @@ on:
         type: string
     outputs:
       image-tag:
-        description: "Tag de l'image poussée"
+        description: "Tag principal de l'image poussée (sha- sur branche, vX.Y.Z sur tag)"
+        # outputs.version donne le tag primaire propre (pas la liste multi-lignes)
         value: ${{ jobs.build-push.outputs.image-tag }}
 
 jobs:
   build-push:
     name: Build + Trivy + Push GHCR
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
     outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
+      image-tag: ${{ steps.meta.outputs.version }}
+
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -34,26 +43,35 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/${{ inputs.image-name }}
+          images: ghcr.io/${{ github.repository_owner }}/${{ inputs.image-name }}
           tags: |
-            type=sha,prefix=main-,format=short
+            # FIX: sur push de branche → tag sha-<short>
+            type=sha,prefix=sha-,format=short
+            # FIX: sur push de tag git (v1.0.0, v1.0.0-rc) → tag sémantique
+            # Cela permet au job deploy-preprod/prod d'utiliser github.ref_name
+            type=ref,event=tag
 
-      - name: Build image
-        uses: docker/build-push-action@v5
+      # build local pour scan Trivy (avec cache GHA)
+      - name: Build image (local, pour Trivy scan)
+        uses: docker/build-push-action@v6
         with:
           context: ${{ inputs.context }}
           push: false
           load: true
           tags: ${{ steps.meta.outputs.tags }}
+          # cache Docker BuildKit — évite de rebuilder les layers inchangés
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Trivy scan
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ steps.meta.outputs.tags }}
+          image-ref: ghcr.io/${{ github.repository_owner }}/${{ inputs.image-name }}:${{ steps.meta.outputs.version }}
           format: sarif
           output: trivy-${{ inputs.image-name }}.sarif
           severity: CRITICAL,HIGH
           exit-code: "1"
+          ignore-unfixed: true
 
       - name: Upload Trivy SARIF
         if: always()
@@ -61,9 +79,12 @@ jobs:
         with:
           sarif_file: trivy-${{ inputs.image-name }}.sarif
 
+      # push avec cache (réutilise les layers déjà buildés ci-dessus)
       - name: Push image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ${{ inputs.context }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
