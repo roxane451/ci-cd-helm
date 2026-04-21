@@ -16,12 +16,11 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: Install dependencies (frontend)
-        working-directory: ./frontend
-        run: npm ci
-
-      - name: Install dependencies (backend)
-        working-directory: ./backend
+      # npm workspaces — le package-lock.json est UNIQUEMENT à la racine.
+      # "npm ci" lancé dans ./frontend ou ./backend cherche un lockfile local
+      # qui n'existe pas → erreur "can only install with an existing package-lock.json".
+      # Solution : installer depuis la racine, qui installe tous les workspaces.
+      - name: Install all dependencies (root workspaces)
         run: npm ci
 
       - name: Lint frontend
@@ -34,6 +33,11 @@ jobs:
 
       - name: Tests backend
         working-directory: ./backend
+        run: npm test
+
+      # FIX: ajout des tests frontend manquants
+      - name: Tests frontend
+        working-directory: ./frontend
         run: npm test
 
       - name: npm audit
