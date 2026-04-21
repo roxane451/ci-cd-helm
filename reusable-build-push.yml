@@ -45,28 +45,30 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/${{ inputs.image-name }}
           tags: |
-            # FIX: sur push de branche → tag sha-<short>
             type=sha,prefix=sha-,format=short
-            # FIX: sur push de tag git (v1.0.0, v1.0.0-rc) → tag sémantique
-            # Cela permet au job deploy-preprod/prod d'utiliser github.ref_name
             type=ref,event=tag
 
-      # build local pour scan Trivy (avec cache GHA)
+      # Build local avec iidfile pour capturer le digest exact utilisé par Trivy.
+      # L'iidfile stocke le sha256 de l'image buildée localement — Trivy
+      # scanne ainsi exactement ce qui sera poussé, pas un tag potentiellement stale.
       - name: Build image (local, pour Trivy scan)
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: ${{ inputs.context }}
           push: false
           load: true
           tags: ${{ steps.meta.outputs.tags }}
-          # cache Docker BuildKit — évite de rebuilder les layers inchangés
+          iidfile: /tmp/iid-${{ inputs.image-name }}.txt
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Trivy scan
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ghcr.io/${{ github.repository_owner }}/${{ inputs.image-name }}:${{ steps.meta.outputs.version }}
+          # Utilise le digest sha256 capturé par iidfile — garantit que Trivy
+          # scanne exactement l'image buildée localement (pas un tag stale)
+          image-ref: ${{ steps.build.outputs.digest }}
           format: sarif
           output: trivy-${{ inputs.image-name }}.sarif
           severity: CRITICAL,HIGH
@@ -79,7 +81,8 @@ jobs:
         with:
           sarif_file: trivy-${{ inputs.image-name }}.sarif
 
-      # push avec cache (réutilise les layers déjà buildés ci-dessus)
+      # Push vers GHCR — réutilise les layers déjà buildés via le cache GHA,
+      # pas de rebuild réel (BuildKit retrouve les layers par leur digest)
       - name: Push image
         uses: docker/build-push-action@v6
         with:
