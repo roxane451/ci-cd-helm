@@ -1,4 +1,4 @@
-# ci-cd-mern-stack
+# ci-cd-helm
 
 Bibliothèque de workflows GitHub Actions **réutilisables** pour applications MERN (React + Node.js + MongoDB) déployées sur Kubernetes via Helm.
  
@@ -34,7 +34,7 @@ Scan de secrets dans l'historique Git complet avec [Gitleaks](https://github.com
 ```yaml
 jobs:
   secret-scan:
-    uses: roxane451/ci-cd-mern-stack/.github/workflows/reusable-secret-scan.yml@main
+    uses: roxane451/ci-cd-helm/.github/workflows/reusable-secret-scan.yml@main
     secrets: inherit
 ```
  
@@ -52,7 +52,7 @@ TypeScript check, ESLint, tests Jest (backend + frontend) et `npm audit` sur les
 ```yaml
 jobs:
   lint-test:
-    uses: roxane451/ci-cd-mern-stack/.github/workflows/reusable-lint-test.yml@main
+    uses: roxane451/ci-cd-helm/.github/workflows/reusable-lint-test.yml@main
     secrets: inherit
 ```
  
@@ -91,7 +91,7 @@ Build Docker multi-stage, scan CVE Trivy et push vers GHCR.
 jobs:
   build-backend:
     needs: [secret-scan, lint-test]
-    uses: roxane451/ci-cd-mern-stack/.github/workflows/reusable-build-push.yml@main
+    uses: roxane451/ci-cd-helm/.github/workflows/reusable-build-push.yml@main
     with:
       image-name: backend
       context: ./backend
@@ -99,7 +99,7 @@ jobs:
  
   build-frontend:
     needs: [secret-scan, lint-test]
-    uses: roxane451/ci-cd-mern-stack/.github/workflows/reusable-build-push.yml@main
+    uses: roxane451/ci-cd-helm/.github/workflows/reusable-build-push.yml@main
     with:
       image-name: frontend
       context: ./frontend
@@ -125,7 +125,7 @@ Déploiement dans un cluster k3d éphémère sur runner **self-hosted**, smoke t
 jobs:
   smoke-test:
     needs: [build-backend, build-frontend]
-    uses: roxane451/ci-cd-mern-stack/.github/workflows/reusable-smoke-test-k3d.yml@main
+    uses: roxane451/ci-cd-helm/.github/workflows/reusable-smoke-test-k3d.yml@main
     with:
       image-tag: ${{ needs.build-backend.outputs.image-tag }}
     secrets: inherit
@@ -156,7 +156,7 @@ Le workflow checkout automatiquement le repo `ayur-veda-helm` pour récupérer l
 jobs:
   deploy-preprod:
     needs: [build-backend, build-frontend]
-    uses: roxane451/ci-cd-mern-stack/.github/workflows/reusable-helm-deploy.yml@main
+    uses: roxane451/ci-cd-helm/.github/workflows/reusable-helm-deploy.yml@main
     with:
       environment: preprod
       image-tag: ${{ github.ref_name }}
@@ -165,7 +165,7 @@ jobs:
  
   deploy-prod:
     needs: [build-backend, build-frontend]
-    uses: roxane451/ci-cd-mern-stack/.github/workflows/reusable-helm-deploy.yml@main
+    uses: roxane451/ci-cd-helm/.github/workflows/reusable-helm-deploy.yml@main
     with:
       environment: prod
       image-tag: ${{ github.ref_name }}
@@ -196,17 +196,17 @@ on:
  
 jobs:
   secret-scan:
-    uses: roxane451/ci-cd-mern-stack/.github/workflows/reusable-secret-scan.yml@main
+    uses: roxane451/ci-cd-helm/.github/workflows/reusable-secret-scan.yml@main
     secrets: inherit
  
   lint-test:
-    uses: roxane451/ci-cd-mern-stack/.github/workflows/reusable-lint-test.yml@main
+    uses: roxane451/ci-cd-helm/.github/workflows/reusable-lint-test.yml@main
     secrets: inherit
  
   build-backend:
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     needs: [secret-scan, lint-test]
-    uses: roxane451/ci-cd-mern-stack/.github/workflows/reusable-build-push.yml@main
+    uses: roxane451/ci-cd-helm/.github/workflows/reusable-build-push.yml@main
     with:
       image-name: backend
       context: ./backend
@@ -215,7 +215,7 @@ jobs:
   build-frontend:
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     needs: [secret-scan, lint-test]
-    uses: roxane451/ci-cd-mern-stack/.github/workflows/reusable-build-push.yml@main
+    uses: roxane451/ci-cd-helm/.github/workflows/reusable-build-push.yml@main
     with:
       image-name: frontend
       context: ./frontend
@@ -224,7 +224,7 @@ jobs:
   smoke-test:
     if: github.ref == 'refs/heads/main'
     needs: [build-backend, build-frontend]
-    uses: roxane451/ci-cd-mern-stack/.github/workflows/reusable-smoke-test-k3d.yml@main
+    uses: roxane451/ci-cd-helm/.github/workflows/reusable-smoke-test-k3d.yml@main
     with:
       image-tag: ${{ needs.build-backend.outputs.image-tag }}
     secrets: inherit
@@ -232,7 +232,7 @@ jobs:
   deploy-preprod:
     if: startsWith(github.ref, 'refs/tags/') && contains(github.ref, '-rc')
     needs: [build-backend, build-frontend]
-    uses: roxane451/ci-cd-mern-stack/.github/workflows/reusable-helm-deploy.yml@main
+    uses: roxane451/ci-cd-helm/.github/workflows/reusable-helm-deploy.yml@main
     with:
       environment: preprod
       image-tag: ${{ github.ref_name }}
@@ -242,7 +242,7 @@ jobs:
   deploy-prod:
     if: startsWith(github.ref, 'refs/tags/') && !contains(github.ref, '-rc')
     needs: [build-backend, build-frontend]
-    uses: roxane451/ci-cd-mern-stack/.github/workflows/reusable-helm-deploy.yml@main
+    uses: roxane451/ci-cd-helm/.github/workflows/reusable-helm-deploy.yml@main
     with:
       environment: prod
       image-tag: ${{ github.ref_name }}
