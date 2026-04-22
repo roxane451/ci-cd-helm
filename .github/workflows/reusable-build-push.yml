@@ -3,20 +3,16 @@ name: Reusable — Build & Push GHCR
 on:
   workflow_call:
     inputs:
-      dockerfile:
-        required: false
-        type: string
-        default: Dockerfile
       image-name:
         required: true
         type: string
-      context:
+      dockerfile:
         required: true
         type: string
+        description: "Chemin vers le Dockerfile (ex: ./backend/Dockerfile)"
     outputs:
       image-tag:
         description: "Tag principal de l'image poussée (sha- sur branche, vX.Y.Z sur tag)"
-        # outputs.version donne le tag primaire propre (pas la liste multi-lignes)
         value: ${{ jobs.build-push.outputs.image-tag }}
 
 jobs:
@@ -31,7 +27,7 @@ jobs:
       image-tag: ${{ steps.meta.outputs.version }}
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -52,25 +48,22 @@ jobs:
             type=sha,prefix=sha-,format=short
             type=ref,event=tag
 
-      # Build local avec iidfile pour capturer le digest exact utilisé par Trivy.
-      # L'iidfile stocke le sha256 de l'image buildée localement — Trivy
-      # scanne ainsi exactement ce qui sera poussé, pas un tag potentiellement stale.
+      # Contexte = racine (.) pour accéder au package-lock.json racine npm workspaces
+      # Dockerfile passé explicitement via l'input pour cibler backend/ ou frontend/
       - name: Build image (local, pour Trivy scan)
-        id: build
         uses: docker/build-push-action@v6
         with:
-          context: ${{ inputs.context }}
+          context: .
+          file: ${{ inputs.dockerfile }}
           push: false
           load: true
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
- 
+
       - name: Trivy scan
         uses: aquasecurity/trivy-action@master
         with:
-          # On scanne par tag (ex: ghcr.io/roxane451/backend:sha-2ec746c)
-          # qui est garanti présent dans le daemon Docker local après le build --load
           image-ref: ghcr.io/${{ github.repository_owner }}/${{ inputs.image-name }}:${{ steps.meta.outputs.version }}
           format: sarif
           output: trivy-${{ inputs.image-name }}.sarif
@@ -83,12 +76,12 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-${{ inputs.image-name }}.sarif
- 
-      # Push vers GHCR — réutilise les layers déjà buildés via le cache GHA
+
       - name: Push image
         uses: docker/build-push-action@v6
         with:
-          context: ${{ inputs.context }}
+          context: .
+          file: ${{ inputs.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
