@@ -12,18 +12,18 @@ jobs:
     name: Smoke test K8s (k3d self-hosted)
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # le chart Helm est dans un repo séparé, il faut le checkout.
       - name: Checkout ayur-veda-helm
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ${{ github.repository_owner }}/ayur-veda-helm
           path: helm-values
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
 
       - name: Créer cluster k3d éphémère
         run: |

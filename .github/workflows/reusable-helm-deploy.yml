@@ -23,10 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Checkout ayur-veda-helm
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ${{ github.repository_owner }}/ayur-veda-helm
           path: helm-values
@@ -34,7 +34,7 @@ jobs:
 
       - name: Setup kubectl + Helm
         uses: azure/setup-kubectl@v3
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
 
       - name: Configurer KUBECONFIG
         run: |
