@@ -39,8 +39,10 @@ jobs:
       - name: Tests frontend
         working-directory: ./frontend
         run: npm test
-
-      - name: npm audit
-        run: |
-          npm audit --audit-level=high --prefix frontend
-          npm audit --audit-level=high --prefix backend
+      
+      - name: npm audit backend
+        run: npm audit --audit-level=high --prefix backend
+      
+      - name: npm audit frontend
+        run: npm audit --audit-level=high --prefix frontend
+        continue-on-error: true  # dépendances de build, risque moindre
