@@ -45,7 +45,7 @@ jobs:
       - name: Helm upgrade
         run: |
           helm upgrade --install ayurveda \
-            oci://ghcr.io/${{ github.repository_owner }}/helm-mern-stack \
+            oci://ghcr.io/${{ github.repository_owner }}/helm-multi-service \
             -f helm-values/${{ inputs.helm-values-file }} \
             --set backend.image.tag=${{ inputs.image-tag }} \
             --set frontend.image.tag=${{ inputs.image-tag }} \

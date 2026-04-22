@@ -36,7 +36,7 @@ jobs:
       - name: Déployer via Helm (values k3d)
         run: |
           helm upgrade --install ayurveda \
-            oci://ghcr.io/${{ github.repository_owner }}/helm-mern-stack \
+            oci://ghcr.io/${{ github.repository_owner }}/helm-multi-service \
             -f helm-values/helm/values-k3d.yaml \
             --set backend.image.tag=${{ inputs.image-tag }} \
             --set frontend.image.tag=${{ inputs.image-tag }} \
