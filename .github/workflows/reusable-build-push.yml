@@ -3,6 +3,10 @@ name: Reusable — Build & Push GHCR
 on:
   workflow_call:
     inputs:
+      dockerfile:
+        required: false
+        type: string
+        default: Dockerfile
       image-name:
         required: true
         type: string
@@ -56,6 +60,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
           push: false
           load: true
           tags: ${{ steps.meta.outputs.tags }}
@@ -87,6 +92,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
