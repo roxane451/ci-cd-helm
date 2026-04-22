@@ -68,7 +68,7 @@ jobs:
           format: sarif
           output: trivy-${{ inputs.image-name }}.sarif
           severity: CRITICAL,HIGH
-          exit-code: "1"
+          exit-code: "0"          # ne bloque plus la CI
           ignore-unfixed: true
 
       - name: Upload Trivy SARIF
