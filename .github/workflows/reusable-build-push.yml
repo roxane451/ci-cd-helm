@@ -22,7 +22,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      security-events: write
     outputs:
       image-tag: ${{ steps.meta.outputs.version }}
 
@@ -48,8 +47,6 @@ jobs:
             type=sha,prefix=sha-,format=short
             type=ref,event=tag
 
-      # Contexte = racine (.) pour accéder au package-lock.json racine npm workspaces
-      # Dockerfile passé explicitement via l'input pour cibler backend/ ou frontend/
       - name: Build image (local, pour Trivy scan)
         uses: docker/build-push-action@v6
         with:
@@ -68,14 +65,16 @@ jobs:
           format: sarif
           output: trivy-${{ inputs.image-name }}.sarif
           severity: CRITICAL,HIGH
-          exit-code: "0"          # ne bloque plus la CI
+          exit-code: "0"
           ignore-unfixed: true
 
-      - name: Upload Trivy SARIF
+      - name: Upload Trivy SARIF as artifact
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: actions/upload-artifact@v4
         with:
-          sarif_file: trivy-${{ inputs.image-name }}.sarif
+          name: trivy-${{ inputs.image-name }}-sarif
+          path: trivy-${{ inputs.image-name }}.sarif
+          retention-days: 1
 
       - name: Push image
         uses: docker/build-push-action@v6
