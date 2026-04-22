@@ -60,20 +60,18 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ${{ inputs.context }}
-          file: ${{ inputs.dockerfile }}
           push: false
           load: true
           tags: ${{ steps.meta.outputs.tags }}
-          iidfile: /tmp/iid-${{ inputs.image-name }}.txt
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
+ 
       - name: Trivy scan
         uses: aquasecurity/trivy-action@master
         with:
-          # Utilise le digest sha256 capturé par iidfile — garantit que Trivy
-          # scanne exactement l'image buildée localement (pas un tag stale)
-          image-ref: ${{ steps.build.outputs.digest }}
+          # On scanne par tag (ex: ghcr.io/roxane451/backend:sha-2ec746c)
+          # qui est garanti présent dans le daemon Docker local après le build --load
+          image-ref: ghcr.io/${{ github.repository_owner }}/${{ inputs.image-name }}:${{ steps.meta.outputs.version }}
           format: sarif
           output: trivy-${{ inputs.image-name }}.sarif
           severity: CRITICAL,HIGH
@@ -85,14 +83,12 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-${{ inputs.image-name }}.sarif
-
-      # Push vers GHCR — réutilise les layers déjà buildés via le cache GHA,
-      # pas de rebuild réel (BuildKit retrouve les layers par leur digest)
+ 
+      # Push vers GHCR — réutilise les layers déjà buildés via le cache GHA
       - name: Push image
         uses: docker/build-push-action@v6
         with:
           context: ${{ inputs.context }}
-          file: ${{ inputs.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
