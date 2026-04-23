@@ -6,24 +6,31 @@ on:
       image-tag:
         required: true
         type: string
+      namespace:
+        required: false
+        type: string
+        default: smoke-test
 
 jobs:
   smoke-test:
-    name: Smoke test K8s (k3d self-hosted)
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v5
+    name: Smoke test K8s (k3d)
+    runs-on: ubuntu-latest
 
-      # le chart Helm est dans un repo séparé, il faut le checkout.
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Checkout ayur-veda-helm
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/ayur-veda-helm
           path: helm-values
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install k3d
+        run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+
       - name: Install Helm
-        uses: azure/setup-helm@v5
+        uses: azure/setup-helm@v4
 
       - name: Créer cluster k3d éphémère
         run: |
@@ -33,25 +40,45 @@ jobs:
       - name: Configurer kubeconfig
         run: k3d kubeconfig merge smoke-test --kubeconfig-switch-context
 
+      - name: Créer namespace + secret GHCR
+        run: |
+          kubectl create namespace ${{ inputs.namespace }} --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret docker-registry ghcr-secret \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            --namespace=${{ inputs.namespace }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Login Helm GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io \
+            --username ${{ github.actor }} \
+            --password-stdin
+
       - name: Déployer via Helm (values k3d)
         run: |
           helm upgrade --install ayurveda \
-            oci://ghcr.io/${{ github.repository_owner }}/helm-multi-service \
+            oci://ghcr.io/${{ github.repository_owner }}/multi-service \
+            --version 1.0.1 \
             -f helm-values/helm/values-k3d.yaml \
+            --namespace ${{ inputs.namespace }} \
             --set backend.image.tag=${{ inputs.image-tag }} \
             --set frontend.image.tag=${{ inputs.image-tag }} \
-            --wait --timeout 120s
+            --set backend.secrets.mongodbUri="mongodb://ayurMongoAdmin:smokepassword@mongodb.${{ inputs.namespace }}.svc.cluster.local:27017/ayurveda?authSource=admin" \
+            --set backend.secrets.jwtSecret="smoke-test-jwt-secret-minimum-32-chars" \
+            --wait --timeout 180s
 
       - name: Attendre les pods
         run: |
           kubectl wait --for=condition=ready pod \
-            -l app=backend --timeout=60s
+            -l app=backend --namespace=${{ inputs.namespace }} --timeout=90s
           kubectl wait --for=condition=ready pod \
-            -l app=frontend --timeout=60s
+            -l app=frontend --namespace=${{ inputs.namespace }} --timeout=90s
 
       - name: Smoke test HTTP
         run: |
-          kubectl port-forward svc/backend 3001:5000 &
+          kubectl port-forward svc/backend 3001:5000 --namespace=${{ inputs.namespace }} &
           sleep 3
           curl -f http://localhost:3001/api/health
           kill %1
