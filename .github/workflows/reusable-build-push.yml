@@ -2,14 +2,14 @@ name: Reusable — Build & Push GHCR
 
 on:
   workflow_call:
-    inputs:
-      image-name:
-        required: true
-        type: string
-      dockerfile:
-        required: true
-        type: string
-        description: "Chemin vers le Dockerfile (ex: ./backend/Dockerfile)"
+  inputs:
+    image-name:
+      required: true
+      type: string
+    context:             
+      required: true
+      type: string
+      description: "Contexte Docker (ex: ./backend)"
     outputs:
       image-tag:
         description: "Tag principal de l'image poussée (sha- sur branche, vX.Y.Z sur tag)"
@@ -50,8 +50,7 @@ jobs:
       - name: Build image (local, pour Trivy scan)
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: ${{ inputs.dockerfile }}
+          context: ${{ inputs.context }}
           push: false
           load: true
           tags: ${{ steps.meta.outputs.tags }}
