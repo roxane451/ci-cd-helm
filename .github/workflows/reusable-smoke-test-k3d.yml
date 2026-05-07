@@ -6,24 +6,28 @@ on:
       image-tag:
         required: true
         type: string
+      namespace: # input déclaré pour accepter ce que ci-cd.yml passe
+        required: false
+        type: string
+        default: "ayur-smoke"
 
 jobs:
   smoke-test:
     name: Smoke test K8s (k3d self-hosted)
-    runs-on: self-hosted
+    runs-on: [self-hosted, k3d]  #label explicite pour cibler un runner avec k3d installé
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
-      # le chart Helm est dans un repo séparé, il faut le checkout.
+      # le chart Helm est dans un repo séparé il faut le checkout.
       - name: Checkout ayur-veda-helm
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/ayur-veda-helm
           path: helm-values
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Helm
-        uses: azure/setup-helm@v5
+        uses: azure/setup-helm@v4
 
       - name: Créer cluster k3d éphémère
         run: |
@@ -40,21 +44,31 @@ jobs:
             -f helm-values/helm/values-k3d.yaml \
             --set backend.image.tag=${{ inputs.image-tag }} \
             --set frontend.image.tag=${{ inputs.image-tag }} \
+            --namespace ${{ inputs.namespace }} \
+            --create-namespace \
             --wait --timeout 120s
+
 
       - name: Attendre les pods
         run: |
           kubectl wait --for=condition=ready pod \
-            -l app=backend --timeout=60s
+            -l app=backend \
+            --namespace ${{ inputs.namespace }} \
+            --timeout=60s
           kubectl wait --for=condition=ready pod \
-            -l app=frontend --timeout=60s
+            -l app=frontend \
+            --namespace ${{ inputs.namespace }} \
+            --timeout=60s
+
 
       - name: Smoke test HTTP
         run: |
-          kubectl port-forward svc/backend 3001:5000 &
+          kubectl port-forward svc/backend 3001:5000 \
+            --namespace ${{ inputs.namespace }} &
           sleep 3
           curl -f http://localhost:3001/api/health
           kill %1
+
 
       - name: Cleanup cluster
         if: always()
