@@ -62,7 +62,7 @@ jobs:
       - name: Déployer via Helm (values k3d)
         run: |
           helm upgrade --install ayurveda \
-            oci://ghcr.io/${{ github.repository_owner }}/multi-service \
+            oci://ghcr.io/${{ github.repository_owner }}/helm-multi-service \
             --version 1.0.1 \
             -f helm-values/helm/values-k3d.yaml \
             --namespace ${{ inputs.namespace }} \
