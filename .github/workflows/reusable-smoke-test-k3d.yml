@@ -63,7 +63,7 @@ jobs:
         run: |
           helm upgrade --install ayurveda \
             oci://ghcr.io/${{ github.repository_owner }}/helm-multi-service \
-            --version 1.0.1 \
+            --version 1.0.2 \
             -f helm-values/helm/values-k3d.yaml \
             --namespace ${{ inputs.namespace }} \
             --set backend.image.tag=${{ inputs.image-tag }} \
