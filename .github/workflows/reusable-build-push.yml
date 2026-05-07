@@ -9,7 +9,7 @@ on:
       context:
         required: true
         type: string
-        description: "Contexte Docker (ex: ./backend)"
+        description: "Sous-dossier du service (ex: ./backend). Le contexte Docker est toujours la racine du monorepo."
     outputs:
       image-tag:
         description: "Tag principal de l'image poussée (sha- sur branche, vX.Y.Z sur tag)"
@@ -19,6 +19,8 @@ jobs:
   build-push:
     name: Build + Trivy + Push GHCR
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     permissions:
       contents: read
       packages: write
@@ -26,7 +28,7 @@ jobs:
       image-tag: ${{ steps.meta.outputs.version }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -47,10 +49,13 @@ jobs:
             type=sha,prefix=sha-,format=short
             type=ref,event=tag
 
+      # Contexte = racine du monorepo (package.json racine + workspace)
+      # Dockerfile = sous-dossier du service concerné
       - name: Build image (local, pour Trivy scan)
         uses: docker/build-push-action@v6
         with:
-          context: ${{ inputs.context }}
+          context: .
+          file: ${{ inputs.context }}/Dockerfile
           push: false
           load: true
           tags: ${{ steps.meta.outputs.tags }}
@@ -69,7 +74,8 @@ jobs:
       - name: Push image
         uses: docker/build-push-action@v6
         with:
-          context: ${{ inputs.context }}
+          context: .
+          file: ${{ inputs.context }}/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
