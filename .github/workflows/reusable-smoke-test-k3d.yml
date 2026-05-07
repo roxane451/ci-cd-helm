@@ -10,6 +10,9 @@ on:
         required: false
         type: string
         default: "ayur-smoke"
+    secrets:             
+      PAT_HELM_REPO:
+        required: true
 
 jobs:
   smoke-test:
