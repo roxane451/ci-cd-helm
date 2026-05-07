@@ -16,6 +16,8 @@ on:
     secrets:
       KUBECONFIG_B64:
         required: true
+      PAT_HELM_REPO:
+        required: true
 
 jobs:
   helm-deploy:
@@ -30,7 +32,7 @@ jobs:
         with:
           repository: ${{ github.repository_owner }}/ayur-veda-helm
           path: helm-values
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_HELM_REPO }}
 
       - name: Setup kubectl + Helm
         uses: azure/setup-kubectl@v3
