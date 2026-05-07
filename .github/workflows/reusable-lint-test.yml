@@ -8,18 +8,14 @@ jobs:
     name: Lint & Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: "npm"
 
-      # npm workspaces — le package-lock.json est UNIQUEMENT à la racine.
-      # "npm ci" lancé dans ./frontend ou ./backend cherche un lockfile local
-      # qui n'existe pas → erreur "can only install with an existing package-lock.json".
-      # Solution : installer depuis la racine, qui installe tous les workspaces.
       - name: Install all dependencies (root workspaces)
         run: npm ci
 
@@ -38,11 +34,6 @@ jobs:
       - name: Tests frontend
         working-directory: ./frontend
         run: npm test
-    
-      - name: Install dependencies
-        run: |
-          npm install --prefix backend
-          npm install --prefix frontend
 
       - name: npm audit backend
         run: npm audit --audit-level=high --prefix backend

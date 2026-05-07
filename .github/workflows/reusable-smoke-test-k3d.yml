@@ -6,7 +6,7 @@ on:
       image-tag:
         required: true
         type: string
-      namespace: # input déclaré pour accepter ce que ci-cd.yml passe
+      namespace:
         required: false
         type: string
         default: "ayur-smoke"
@@ -19,7 +19,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # le chart Helm est dans un repo séparé il faut le checkout.
       - name: Checkout ayur-veda-helm
         uses: actions/checkout@v4
         with:
@@ -31,7 +30,6 @@ jobs:
         run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
 
       - name: Install Helm
-        uses: azure/setup-helm@v4
         uses: azure/setup-helm@v4
 
       - name: Créer cluster k3d éphémère
@@ -61,16 +59,14 @@ jobs:
       - name: Déployer via Helm (values k3d)
         run: |
           helm upgrade --install ayurveda \
-            oci://ghcr.io/${{ github.repository_owner }}/multi-service \
+            oci://ghcr.io/${{ github.repository_owner }}/helm-multi-service \
             --version 1.0.1 \
             -f helm-values/helm/values-k3d.yaml \
             --namespace ${{ inputs.namespace }} \
             --set backend.image.tag=${{ inputs.image-tag }} \
             --set frontend.image.tag=${{ inputs.image-tag }} \
-            --namespace ${{ inputs.namespace }} \
             --create-namespace \
             --wait --timeout 120s
-
 
       - name: Attendre les pods
         run: |
@@ -83,7 +79,6 @@ jobs:
             --namespace ${{ inputs.namespace }} \
             --timeout=60s
 
-
       - name: Smoke test HTTP
         run: |
           kubectl port-forward svc/backend 3001:5000 \
@@ -91,7 +86,6 @@ jobs:
           sleep 3
           curl -f http://localhost:3001/api/health
           kill %1
-
 
       - name: Cleanup cluster
         if: always()
