@@ -258,7 +258,7 @@ Les secrets sont transmis via `secrets: inherit`. Ils doivent être configurés 
  
 | Secret | Utilisé par | Description |
 |--------|-------------|-------------|
-| `GITHUB_TOKEN` | tous | Automatiquement disponible — push GHCR, upload SARIF |
+| `PAT_HELM_REPO` | tous | Automatiquement disponible — push GHCR, upload SARIF |
 | `KUBECONFIG_B64` | `reusable-helm-deploy` | Kubeconfig du cluster cible encodé en base64 |
  
 Pour générer `KUBECONFIG_B64` :

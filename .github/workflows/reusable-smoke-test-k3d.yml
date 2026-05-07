@@ -24,7 +24,7 @@ jobs:
         with:
           repository: ${{ github.repository_owner }}/ayur-veda-helm
           path: helm-values
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_HELM_REPO }}
 
       - name: Install k3d
         run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
@@ -46,13 +46,13 @@ jobs:
           kubectl create secret docker-registry ghcr-secret \
             --docker-server=ghcr.io \
             --docker-username=${{ github.actor }} \
-            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            --docker-password=${{ secrets.PAT_HELM_REPO }} \
             --namespace=${{ inputs.namespace }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Login Helm GHCR
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io \
+          echo "${{ secrets.PAT_HELM_REPO }}" | helm registry login ghcr.io \
             --username ${{ github.actor }} \
             --password-stdin
 
