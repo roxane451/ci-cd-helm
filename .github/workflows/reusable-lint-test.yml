@@ -36,8 +36,8 @@ jobs:
         run: npm test
 
       - name: npm audit backend
-        run: npm audit --audit-level=high --prefix backend
+        run: npm audit --audit-level=high --workspace=backend
 
       - name: npm audit frontend
-        run: npm audit --audit-level=high --prefix frontend
-        continue-on-error: true  # dépendances de build, risque moindre
+        run: npm audit --audit-level=high --workspace=frontend
+        continue-on-error: true
