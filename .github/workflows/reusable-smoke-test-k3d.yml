@@ -19,7 +19,7 @@ jobs:
     name: Smoke test K8s (k3d)
     runs-on: ubuntu-latest
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true 
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - uses: actions/checkout@v4
@@ -48,6 +48,11 @@ jobs:
       - name: Créer namespace + secret GHCR
         run: |
           kubectl create namespace ${{ inputs.namespace }} --dry-run=client -o yaml | kubectl apply -f -
+          kubectl label namespace ${{ inputs.namespace }} \
+            app.kubernetes.io/managed-by=Helm --overwrite
+          kubectl annotate namespace ${{ inputs.namespace }} \
+            meta.helm.sh/release-name=ayurveda \
+            meta.helm.sh/release-namespace=${{ inputs.namespace }} --overwrite
           kubectl create secret docker-registry ghcr-secret \
             --docker-server=ghcr.io \
             --docker-username=${{ github.actor }} \
@@ -70,7 +75,6 @@ jobs:
             --namespace ${{ inputs.namespace }} \
             --set backend.image.tag=${{ inputs.image-tag }} \
             --set frontend.image.tag=${{ inputs.image-tag }} \
-            --create-namespace \
             --wait --timeout 300s
 
       - name: Attendre les pods
@@ -95,8 +99,9 @@ jobs:
       - name: Debug pods si échec
         if: failure()
         run: |
-          kubectl get pods -n ${{ inputs.namespace }}
-          kubectl describe pods -n ${{ inputs.namespace }}
+          kubectl get pods --all-namespaces
+          kubectl get pods -n ${{ inputs.namespace }} || true
+          kubectl describe pods -n ${{ inputs.namespace }} || true
           kubectl logs -l app=backend -n ${{ inputs.namespace }} --tail=50 || true
           kubectl logs -l app=frontend -n ${{ inputs.namespace }} --tail=50 || true
           kubectl logs -l app=mongodb -n ${{ inputs.namespace }} --tail=50 || true
