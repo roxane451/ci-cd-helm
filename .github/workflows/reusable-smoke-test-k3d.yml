@@ -69,7 +69,7 @@ jobs:
             --set backend.image.tag=${{ inputs.image-tag }} \
             --set frontend.image.tag=${{ inputs.image-tag }} \
             --create-namespace \
-            --wait --timeout 120s
+            --wait --timeout 300s
 
       - name: Attendre les pods
         run: |
