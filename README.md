@@ -15,7 +15,7 @@ secret-scan                   secret-scan           secret-scan         secret-s
 lint-test                     lint-test             lint-test           lint-test
                               build-backend         build-backend       build-backend
                               build-frontend        build-frontend      build-frontend
-                              smoke-test (k3d)
+                              ayur-smoke (k3d)
                                                     deploy → preprod    deploy → prod
                                                                         (approbation requise)
 ```
@@ -108,7 +108,7 @@ jobs:
  
 ---
  
-### `reusable-smoke-test-k3d.yml`
+### `reusable-ayur-smoke-k3d.yml`
  
 Déploiement dans un cluster k3d éphémère sur runner **self-hosted**, smoke test HTTP sur `/api/health`, puis suppression du cluster.
  
@@ -123,9 +123,9 @@ Déploiement dans un cluster k3d éphémère sur runner **self-hosted**, smoke t
 **Utilisation :**
 ```yaml
 jobs:
-  smoke-test:
+  ayur-smoke:
     needs: [build-backend, build-frontend]
-    uses: roxane451/ci-cd-helm/.github/workflows/reusable-smoke-test-k3d.yml@main
+    uses: roxane451/ci-cd-helm/.github/workflows/reusable-ayur-smoke-k3d.yml@main
     with:
       image-tag: ${{ needs.build-backend.outputs.image-tag }}
     secrets: inherit
@@ -221,10 +221,10 @@ jobs:
       context: ./frontend
     secrets: inherit
  
-  smoke-test:
+  ayur-smoke:
     if: github.ref == 'refs/heads/main'
     needs: [build-backend, build-frontend]
-    uses: roxane451/ci-cd-helm/.github/workflows/reusable-smoke-test-k3d.yml@main
+    uses: roxane451/ci-cd-helm/.github/workflows/reusable-ayur-smoke-k3d.yml@main
     with:
       image-tag: ${{ needs.build-backend.outputs.image-tag }}
     secrets: inherit

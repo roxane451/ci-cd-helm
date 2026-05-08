@@ -15,7 +15,7 @@ on:
         required: true
 
 jobs:
-  smoke-test:
+  ayur-smoke:
     name: Smoke test K8s (k3d)
     runs-on: ubuntu-latest
 
@@ -37,11 +37,11 @@ jobs:
 
       - name: Créer cluster k3d éphémère
         run: |
-          k3d cluster delete smoke-test 2>/dev/null || true
-          k3d cluster create smoke-test --wait --timeout 60s
+          k3d cluster delete ayur-smoke 2>/dev/null || true
+          k3d cluster create ayur-smoke --wait --timeout 60s
 
       - name: Configurer kubeconfig
-        run: k3d kubeconfig merge smoke-test --kubeconfig-switch-context
+        run: k3d kubeconfig merge ayur-smoke --kubeconfig-switch-context
 
       - name: Créer namespace + secret GHCR
         run: |
@@ -92,4 +92,4 @@ jobs:
 
       - name: Cleanup cluster
         if: always()
-        run: k3d cluster delete smoke-test
+        run: k3d cluster delete ayur-smoke
